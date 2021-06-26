@@ -4,10 +4,10 @@ sopel-remind
 
 Sopel plugin ``.in`` command::
 
-    [Exirel]: .in 2h go to the grocery store
-    [Sopel]: Exirel: Okay, will remind in 2 hours
+    [17:30] Exirel: .in 2h go to the grocery store
+    [17:30] Sopel: Exirel: I will remind you that at 19:30:00
     (... 2h later ...)
-    [Sopel]: Exirel: go to the grocery store
+    [19:30] Sopel: Exirel: go to the grocery store
 
 Install
 =======
@@ -16,4 +16,4 @@ The recommanded way to install this plugin is to use ``pip``::
 
     $ pip install sopel-remind
 
-Note that this plugin requires Python 3.5+ and Sopel 7+.
+Note that this plugin requires Python 3.6+ and Sopel 7.1+.
