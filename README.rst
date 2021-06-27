@@ -12,7 +12,8 @@ Sopel plugin ``.in`` command::
 Install
 =======
 
-The recommanded way to install this plugin is to use ``pip``::
+The recommanded way to install this plugin **will** be to use ``pip``
+**once it is officially released on pypi**::
 
     $ pip install sopel-remind
 
