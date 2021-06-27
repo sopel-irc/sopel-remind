@@ -5,6 +5,7 @@ quality:
 	flake8 sopel_remind
 	isort tests
 	flake8 tests/*
+	mypy sopel_remind
 
 test:
 	coverage run -m py.test -v .

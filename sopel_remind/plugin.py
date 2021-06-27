@@ -4,7 +4,10 @@ import threading
 from datetime import datetime
 
 import pytz
-from sopel import plugin, tools
+from sopel import plugin, tools  # type: ignore
+from sopel.bot import Sopel, SopelWrapper  # type: ignore
+from sopel.config import Config  # type: ignore
+from sopel.trigger import Trigger  # type: ignore
 
 from . import backend, config
 
@@ -12,18 +15,18 @@ LOCK = threading.RLock()
 LOGGER = tools.get_logger('remind')
 
 
-def setup(bot):
+def setup(bot: Sopel):
     """Setup the plugin."""
     bot.settings.define_section('remind', config.RemindSection)
     backend.setup(bot)
 
 
-def shutdown(bot):
+def shutdown(bot: Sopel):
     """Shutdown the plugin."""
     backend.shutdown(bot)
 
 
-def configure(settings):
+def configure(settings: Config):
     """Configure the plugin."""
     settings.define_section('remind', config.RemindSection)
     settings.remind.configure_setting(
@@ -34,7 +37,7 @@ def configure(settings):
 
 
 @plugin.interval(2)
-def reminder_job(bot):
+def reminder_job(bot: Sopel):
     """Check reminders every 2s."""
     if not bot.backend.connected:
         # Don't run if the bot is not connected.
@@ -42,19 +45,15 @@ def reminder_job(bot):
         return
 
     now = int(pytz.utc.localize(datetime.utcnow()).timestamp())
-    print('Comparing to now', now)
     kept = []
 
     with LOCK:
-        reminders = list(bot.memory[backend.MEMORY_KEY])
-
-        print(reminders)
         # iterate over a copy of what is in memory
+        reminders = list(bot.memory[backend.MEMORY_KEY])
         for reminder in reminders:
             # check time
             if reminder.timestamp > now:
                 # keep for later
-                print('Keep')
                 kept.append(reminder)
                 continue
 
@@ -69,15 +68,12 @@ def reminder_job(bot):
                         reminder.nick)
                 else:
                     # user is not here yet, keep for later
-                    print('In channel but not in user!')
                     kept.append(reminder)
             elif reminder.destination in bot.users:
                 # send reminder to user
-                print('Not in user?')
                 bot.say(reminder.message, reminder.destination, max_messages=2)
             else:
                 # keep for later
-                print('Not in channel or user?')
                 kept.append(reminder)
 
         # save if necessary
@@ -89,7 +85,7 @@ def reminder_job(bot):
 
 
 @plugin.commands('in')
-def remind_in(bot, trigger):
+def remind_in(bot: SopelWrapper, trigger: Trigger):
     """Set a reminder for later."""
     args = trigger.group(2)
 

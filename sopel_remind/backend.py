@@ -1,12 +1,15 @@
 """Backend to store and manage reminders."""
-import collections
 import csv
 import os
 import re
 from datetime import datetime, timedelta
+from typing import List, NamedTuple, Sequence, Tuple, Union
 
 import pytz
-from sopel import tools
+from sopel import tools  # type: ignore
+from sopel.bot import Sopel, SopelWrapper  # type: ignore
+from sopel.config import Config  # type: ignore
+from sopel.trigger import Trigger  # type: ignore
 
 LOGGER = tools.get_logger('remind')
 
@@ -24,17 +27,23 @@ IN_ARGS_PATTERN = r'(?:' + IN_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
 IN_RE = re.compile(IN_ARGS_PATTERN)
 
 
-Reminder = collections.namedtuple(
-    'Reminder', ['timestamp', 'destination', 'nick', 'message'])
+class Reminder(NamedTuple):
+    """User reminder."""
+    timestamp: int
+    """When the reminder must be sent."""
+    destination: str
+    """Where the reminder need to be sent."""
+    nick: str
+    """Who needs to be reminded of the message."""
+    message: str
+    """What message need to be reminded."""
 
 
-def serialize(reminder):
+def serialize(reminder: Reminder) -> Tuple[int, str, str, str]:
     """Serialize a ``reminder`` as a CSV compatible row, i.e. a tuple.
 
     :param reminder: a reminder to serialize
-    :type reminder: :class:``
     :return: a 4-value tuple suitable for a CSV row
-    :rtype: tuple
 
     A reminder is expected to contain:
 
@@ -51,11 +60,11 @@ def serialize(reminder):
     )
 
 
-def save_reminders(reminders, filename):
+def save_reminders(reminders: Sequence[Reminder], filename: str):
     """Save the ``reminders`` into a CSV file.
 
-    :param list reminders: list of reminders to save
-    :param str filename: CSV file to save the ``reminders`` to
+    :param reminders: list of reminders to save
+    :param filename: CSV file to save the ``reminders`` to
     """
     with open(filename, 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(
@@ -65,14 +74,12 @@ def save_reminders(reminders, filename):
             writer.writerow(serialize(reminder))
 
 
-def load_reminders(filename):
+def load_reminders(filename: str) -> List[Reminder]:
     """Load reminders from a CSV file.
 
-    :param str filename: CSV file to load reminders from
+    :param filename: CSV file to load reminders from
     :return: a list of reminders
-    :rtype: tuple
     """
-    reminders = []
     # mode a+ allow to create the file if it doesn't exist yet
     with open(filename, 'a+', newline='', encoding='utf-8') as csvfile:
         csvfile.seek(0)  # read the file from the start
@@ -86,12 +93,11 @@ def load_reminders(filename):
     return reminders
 
 
-def parse_in_delta(line):
+def parse_in_delta(line: str) -> Tuple[timedelta, str]:
     """Parse a reminder line using the ``in`` command format.
 
-    :param str line: reminder line from the ``in`` command
+    :param line: reminder line from the ``in`` command
     :return: a 2-value tuple with ``(timedelta, message)``
-    :rtype: tuple
     :raise ValueError: when ``line`` doesn't match the ``in`` command format
     """
     result = IN_RE.match(line)
@@ -104,33 +110,34 @@ def parse_in_delta(line):
 
     days, hours, minutes, seconds = 0, 0, 0, 0
     if groups[0]:
-        days, hours, minutes, seconds = groups[1:5]
+        days, hours, minutes, seconds = (int(i or 0) for i in groups[1:5])
     elif groups[5]:
-        hours, minutes, seconds = groups[6:9]
+        hours, minutes, seconds = (int(i or 0) for i in groups[6:9])
     elif groups[9]:
-        minutes, seconds = groups[10:12]
+        minutes, seconds = (int(i or 0) for i in groups[10:12])
     else:
-        seconds = groups[13]
+        seconds = int(groups[13] or 0)
 
     delta = timedelta(
-        days=int(days or 0),
-        seconds=int(seconds or 0),
-        minutes=int(minutes or 0),
-        hours=int(hours or 0))
+        days=days,
+        seconds=seconds,
+        minutes=minutes,
+        hours=hours)
 
     return delta, message
 
 
-def build_reminder(trigger, delta, message):
+def build_reminder(
+    trigger: Trigger,
+    delta: timedelta,
+    message: str,
+) -> Reminder:
     """Make a reminder for the current ``trigger``, ``delta``, and ``message``.
 
     :param trigger: current trigger
-    :type trigger: :class:`sopel.trigger.Trigger`
     :param delta: timedelta object to generate the reminder
-    :type delta: :class:`datetime.timedelta`
-    :param str message: message to remind later
+    :param message: message to remind later
     :return: the expected reminder
-    :rtype: :class:`~sopel_remind.backend.Reminder`
     """
     remind_at = pytz.utc.localize(datetime.utcnow()) + delta
     destination = str(trigger.sender)
@@ -144,14 +151,15 @@ def build_reminder(trigger, delta, message):
     )
 
 
-def get_reminder_timezone(bot, reminder):
+def get_reminder_timezone(
+    bot: Union[Sopel, SopelWrapper],
+    reminder: Reminder
+) -> pytz.BaseTzInfo:
     """Select the appropriate timezone for the ``reminder``.
 
     :param bot: bot instance
     :param reminder: reminder to get the timezone for
-    :type reminder: :class:`~sopel_remind.backend.Reminder`
     :return: the appropriate timezone for ``reminder``
-    :rtype: :class:`datetime.tzinfo`
     """
     return pytz.timezone(tools.time.get_timezone(
         bot.db,
@@ -160,7 +168,7 @@ def get_reminder_timezone(bot, reminder):
     ) or 'UTC')
 
 
-def get_reminder_filename(settings):
+def get_reminder_filename(settings: Config) -> str:
     """Retrieve the reminder filename from settings."""
     return os.path.join(
         settings.remind.location or settings.core.homedir,
@@ -168,13 +176,13 @@ def get_reminder_filename(settings):
     )
 
 
-def setup(bot):
+def setup(bot: Sopel):
     """Setup action for the plugin."""
     filename = get_reminder_filename(bot.settings)
     bot.memory[MEMORY_KEY] = load_reminders(filename)
 
 
-def shutdown(bot):
+def shutdown(bot: Sopel):
     """Shutdown action for the plugin."""
     filename = get_reminder_filename(bot.settings)
     save_reminders(bot.memory.get(MEMORY_KEY) or [], filename)
@@ -184,7 +192,7 @@ def shutdown(bot):
         pass
 
 
-def store(bot, reminder):
+def store(bot: Union[Sopel, SopelWrapper], reminder: Reminder):
     """Store a new reminder."""
     bot.memory[MEMORY_KEY].append(reminder)
     filename = get_reminder_filename(bot.settings)

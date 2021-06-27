@@ -1,5 +1,5 @@
 """Configuration section for plugin."""
-from sopel.config.types import FilenameAttribute, StaticSection
+from sopel.config.types import FilenameAttribute, StaticSection  # type: ignore
 
 
 class RemindSection(StaticSection):

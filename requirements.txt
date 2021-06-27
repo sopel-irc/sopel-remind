@@ -1,7 +1,10 @@
 # requirements for dev
-
 flake8
 pylint
 coverage
 pytest
 pyroma
+
+# type checking
+mypy
+types-pytz
