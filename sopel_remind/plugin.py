@@ -85,8 +85,14 @@ def reminder_job(bot: Sopel):
 
 
 @plugin.commands('in')
+@plugin.example('.in 2m30s Do something in 2.5 minutes', user_help=True)
+@plugin.example('.in 1h30m Do something in 1.5 hours', user_help=True)
+@plugin.example('.in 1h23m45s Do something in 1h, 23m and 45s', user_help=True)
 def remind_in(bot: SopelWrapper, trigger: Trigger):
-    """Set a reminder for later."""
+    """Set a reminder for later.
+
+    Use a duration using XhYmZs syntax for X hours, Y minutes, and Z seconds.
+    """
     args = trigger.group(2)
 
     if args is None:
@@ -100,6 +106,41 @@ def remind_in(bot: SopelWrapper, trigger: Trigger):
         return
 
     reminder = backend.build_reminder(trigger, delta, message)
+
+    with LOCK:
+        backend.store(bot, reminder)
+
+    when = datetime.fromtimestamp(
+        reminder.timestamp, pytz.utc
+    ).astimezone(backend.get_reminder_timezone(bot, reminder))
+    bot.reply('I will remind you that at %s' % (when.strftime('%H:%M:%S')))
+
+
+@plugin.command('at')
+@plugin.example('.at 22:15 Do something at 10:15 p.m.', user_help=True)
+@plugin.example('.at 10:00 Do something at 10 a.m.', user_help=True)
+def remind_at(bot: SopelWrapper, trigger: Trigger):
+    """Set a reminder for later using hh:mm:ss exact time (timezone aware).
+
+    Both hh:mm and hh:mm:ss work. If setting a reminder at a past hour of the
+    day, this will use the same hour the next day. The time uses the same
+    timezone as the user, the channel, or UTC if none is available.
+    """
+    args = trigger.group(2)
+
+    if args is None:
+        bot.reply("When and what would you like me to remind?")
+        return
+
+    try:
+        at_time, message = backend.parse_at_time(args)
+    except ValueError:
+        bot.reply("Sorry I didn't understand that.")
+        return
+
+    user_tz = backend.get_user_timezone(bot, trigger.nick, trigger.sender)
+    today = pytz.utc.localize(datetime.utcnow()).astimezone(user_tz)
+    reminder = backend.build_at_reminder(trigger, at_time, today, message)
 
     with LOCK:
         backend.store(bot, reminder)

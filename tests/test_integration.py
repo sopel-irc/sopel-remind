@@ -93,6 +93,44 @@ def test_remind_in_invalid_argument(irc, user):
     )
 
 
+def test_remind_at(irc, user):
+    irc.say(user, '#channel', '.at 10:00 this is my reminder')
+
+    assert len(irc.bot.backend.message_sent) == 1
+    assert len(irc.bot.memory[MEMORY_KEY]) == 1
+
+    reminder = irc.bot.memory[MEMORY_KEY][0]
+    when = datetime.fromtimestamp(reminder.timestamp, pytz.utc)
+
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: I will remind you that at %s"
+        % when.strftime('%H:%M:%S'),
+    )
+
+
+def test_remind_at_no_argument(irc, user):
+    irc.say(user, '#channel', '.at')
+
+    assert len(irc.bot.backend.message_sent) == 1
+    assert len(irc.bot.memory[MEMORY_KEY]) == 0
+
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: "
+        "When and what would you like me to remind?"
+    )
+
+
+def test_remind_at_invalid_argument(irc, user):
+    irc.say(user, '#channel', '.at 26:61 something')
+
+    assert len(irc.bot.backend.message_sent) == 1
+    assert len(irc.bot.memory[MEMORY_KEY]) == 0
+
+    assert irc.bot.backend.message_sent == rawlist(
+        "PRIVMSG #channel :TestUser: Sorry I didn't understand that."
+    )
+
+
 def test_shutdown(irc):
     timestamp = int(datetime.utcnow().timestamp())
     reminder = Reminder(timestamp, '#channel', 'TestUser', 'Test message.')
