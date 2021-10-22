@@ -55,7 +55,7 @@ def test_configure(tmpconfig):
         tmpconfig.core.homedir, 'relative', 'path')
 
 
-def test_remind(irc, user):
+def test_remind_in(irc, user):
     irc.say(user, '#channel', '.in 1s this is my reminder')
 
     assert len(irc.bot.backend.message_sent) == 1
@@ -70,7 +70,7 @@ def test_remind(irc, user):
     )
 
 
-def test_remind_no_argument(irc, user):
+def test_remind_in_no_argument(irc, user):
     irc.say(user, '#channel', '.in')
 
     assert len(irc.bot.backend.message_sent) == 1
@@ -82,7 +82,7 @@ def test_remind_no_argument(irc, user):
     )
 
 
-def test_remind_invalid_argument(irc, user):
+def test_remind_in_invalid_argument(irc, user):
     irc.say(user, '#channel', '.in 5s2m something')
 
     assert len(irc.bot.backend.message_sent) == 1

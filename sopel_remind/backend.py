@@ -2,8 +2,8 @@
 import csv
 import os
 import re
-from datetime import datetime, timedelta
-from typing import List, NamedTuple, Sequence, Tuple, Union
+from datetime import datetime, time, timedelta
+from typing import List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import pytz
 from sopel import tools  # type: ignore
@@ -22,9 +22,18 @@ IN_TIME_PATTERN = '|'.join([
     r'(?P<seconds>(?:(\d+)s))',
 ])
 
+AT_TIME_PATTERN = (
+    # hours:minutes
+    r'(?P<hours>\d{1,2}):(?P<minutes>\d{2})'
+    # optional seconds
+    r'(?::(?P<seconds>\d{2}))?'
+)
+
 IN_ARGS_PATTERN = r'(?:' + IN_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
+AT_ARGS_PATTERN = r'(?:' + AT_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
 
 IN_RE = re.compile(IN_ARGS_PATTERN)
+AT_RE = re.compile(AT_ARGS_PATTERN)
 
 
 class Reminder(NamedTuple):
@@ -127,6 +136,26 @@ def parse_in_delta(line: str) -> Tuple[timedelta, str]:
     return delta, message
 
 
+def parse_at_time(line: str) -> Tuple[time, str]:
+    """Parse a reminder line using the ``at`` command format.
+
+    :param line: reminder line from the ``in`` command
+    :return: a 2-value tuple with ``(seconds, message)``
+    :raise ValueError: when ``line`` doesn't match the ``in`` command format
+    """
+    result = AT_RE.match(line)
+
+    if not result:
+        raise ValueError('Invalid at arguments: %r' % line)
+
+    hours = int(result.group('hours') or 0)
+    minutes = int(result.group('minutes') or 0)
+    seconds = int(result.group('seconds') or 0)
+
+    timer = time(hours, minutes, seconds)
+    return (timer, result.group('text'))
+
+
 def build_reminder(
     trigger: Trigger,
     delta: timedelta,
@@ -151,6 +180,36 @@ def build_reminder(
     )
 
 
+def build_at_reminder(
+    trigger: Trigger,
+    at_time: time,
+    today: datetime,
+    message: str,
+) -> Reminder:
+    """Make a reminder for the current ``trigger`` and ``at_time``.
+
+    :param trigger: current trigger
+    :param at_time: time object to generate the reminder
+    :param today: today's date
+    :param message: message to remind later
+    :return: the expected reminder
+    """
+    remind_at = today.date()
+
+    if today.time() >= at_time:
+        remind_at = remind_at + timedelta(days=1)
+
+    remind_at = datetime.combine(remind_at, at_time, today.tzinfo)
+    destination = str(trigger.sender)
+    nick = str(trigger.nick)
+    return Reminder(
+        int(remind_at.timestamp()),
+        destination,
+        nick,
+        message,
+    )
+
+
 def get_reminder_timezone(
     bot: Union[Sopel, SopelWrapper],
     reminder: Reminder
@@ -165,6 +224,51 @@ def get_reminder_timezone(
         bot.db,
         nick=reminder.nick,
         channel=reminder.destination,
+    ) or 'UTC')
+
+
+def get_user_timezone(
+    bot: Union[Sopel, SopelWrapper],
+    nick: Optional[tools.Identifier] = None,
+    destination: Optional[tools.Identifier] = None,
+) -> pytz.BaseTzInfo:
+    """Select the appropriate timezone for a user/channel.
+
+    :param bot: bot instance
+    :param nick: nick as given by a ``trigger``
+    :param destination: destination as given by a ``trigger``
+    :return: the appropriate timezone for the user
+
+    This function looks for the appropriate timezone given a ``nick`` and a
+    ``destination``. This is a helper function to be used with a trigger::
+
+        def command(bot, trigger):
+            tz = get_user_timezone(bot, trigger.nick, trigger.sender)
+
+    This function will check if:
+
+    * nick/destination are not ``None``
+    * nick is actually a user identifier
+    * destination is actually a channel identifier
+
+    By default, this will return the UTC timezone.
+    """
+    nickname = None
+    channel = None
+
+    if nick is not None and nick.is_nick():
+        nickname = str(nick)
+
+    if destination is not None and not destination.is_nick():
+        channel = str(destination)
+
+    if not nickname and not channel:
+        return pytz.utc
+
+    return pytz.timezone(tools.time.get_timezone(
+        bot.db,
+        nick=nickname,
+        channel=channel,
     ) or 'UTC')
 
 

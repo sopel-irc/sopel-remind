@@ -156,6 +156,38 @@ def test_build_reminder(mockbot, triggerfactory):
     assert int((after_now + delta).timestamp()) >= reminder.timestamp
 
 
+def test_build_at_reminder(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, ':Test!test@example.com PRIVMSG #channel :.at 1:30 message')
+
+    timezone = pytz.timezone('Europe/Paris')
+    today = timezone.localize(datetime.datetime(2021, 9, 28, 10, 0, 0))
+    at_time = datetime.time(11, 0, 0)
+    message = 'test message'
+
+    reminder = backend.build_at_reminder(trigger, at_time, today, message)
+    expected_at = today = timezone.localize(
+        datetime.datetime(2021, 9, 28, 11, 0, 0))
+
+    assert int(expected_at.timestamp()) == reminder.timestamp
+
+
+def test_build_at_reminder_tomorrow(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, ':Test!test@example.com PRIVMSG #channel :.at 1:30 message')
+
+    timezone = pytz.timezone('Europe/Paris')
+    today = timezone.localize(datetime.datetime(2021, 9, 28, 12, 0, 0))
+    at_time = datetime.time(11, 0, 0)
+    message = 'test message'
+
+    reminder = backend.build_at_reminder(trigger, at_time, today, message)
+    expected_at = today = timezone.localize(
+        datetime.datetime(2021, 9, 29, 11, 0, 0))
+
+    assert int(expected_at.timestamp()) == reminder.timestamp
+
+
 def test_get_reminder_timezone(mockbot, mockreminder):
     with mock.patch('sopel.tools.time.get_timezone') as mock_get_timezone:
         mock_get_timezone.return_value = 'Europe/Paris'
@@ -173,6 +205,58 @@ def test_get_reminder_timezone_no_info(mockbot, mockreminder):
 
     mock_get_timezone.assert_called_once_with(
         mockbot.db, nick='Test', channel='#channel')
+    assert result.zone == 'UTC'
+
+
+def test_get_user_timezone(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, ':Test!test@example.com PRIVMSG #channel :.in 5s message')
+
+    with mock.patch('sopel.tools.time.get_timezone') as mock_get_timezone:
+        mock_get_timezone.return_value = 'Europe/Paris'
+        result = backend.get_user_timezone(
+            mockbot, trigger.nick, trigger.sender)
+
+    mock_get_timezone.assert_called_once_with(
+        mockbot.db, nick='Test', channel='#channel')
+    assert result.zone == 'Europe/Paris'
+
+
+def test_get_user_timezone_pm(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, ':Test!test@example.com PRIVMSG :.in 5s message')
+
+    with mock.patch('sopel.tools.time.get_timezone') as mock_get_timezone:
+        mock_get_timezone.return_value = 'Europe/Paris'
+        result = backend.get_user_timezone(
+            mockbot, trigger.nick, trigger.sender)
+
+    mock_get_timezone.assert_called_once_with(
+        mockbot.db, nick='Test', channel=None)
+    assert result.zone == 'Europe/Paris'
+
+
+def test_get_user_timezone_edge_case(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, 'TOPIC #test :.in 5s for real???')
+
+    with mock.patch('sopel.tools.time.get_timezone') as mock_get_timezone:
+        mock_get_timezone.return_value = 'Europe/Paris'
+        result = backend.get_user_timezone(
+            mockbot, trigger.nick, trigger.sender)
+
+    mock_get_timezone.assert_called_once_with(
+        mockbot.db, nick=None, channel='#test')
+    assert result.zone == 'Europe/Paris'
+
+
+def test_get_user_timezone_none(mockbot, triggerfactory):
+    with mock.patch('sopel.tools.time.get_timezone') as mock_get_timezone:
+        mock_get_timezone.return_value = 'Europe/Paris'
+        result = backend.get_user_timezone(
+            mockbot, None, None)
+
+    mock_get_timezone.assert_not_called()
     assert result.zone == 'UTC'
 
 
