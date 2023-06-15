@@ -32,4 +32,4 @@ The recommended way to install this plugin **will** be to use ``pip``
 
     $ pip install sopel-remind
 
-Note that this plugin requires Python 3.6+ and Sopel 7.1+.
+Note that this plugin requires Python 3.7+ and Sopel 7.1+.

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=63.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+platforms = ["Linux x86, x86-64"]
+
+[tool.setuptools.packages.find]
+include = ["sopel_remind", "sopel_remind.*"]
+namespaces = false
+
+[project]
+name = "sopel-remind"
+version = "0.1.dev2"
+description = "Reminder plugin for Sopel"
+keywords = [
+  "sopel",
+  "plugin",
+  "reminder",
+  "calendar",
+  "bot",
+  "irc",
+]
+maintainers = [
+  { name="Florian Strzelecki", email="florian.strzelecki@gmail.com" },
+]
+authors = [
+  { name="dgw", email="dgw@technobabbl.es" },
+  { name="Florian Strzelecki", email="florian.strzelecki@gmail.com" },
+]
+
+readme = "README.rst"
+license = { text="EFL-2.0" }
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: Eiffel Forum License (EFL)",
+    "License :: OSI Approved :: Eiffel Forum License",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Communications :: Chat :: Internet Relay Chat",
+]
+requires-python = ">=3.7, <4"
+dependencies = [
+    "sopel>=7.1",
+    "pytz",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/sopel-irc/sopel-remind"
+"Bug Tracker" = "https://github.com/sopel-irc/sopel-remind/issues"
+
+[project.entry-points."sopel.plugins"]
+remind = "sopel_remind.plugin"

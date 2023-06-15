@@ -8,7 +8,7 @@ quality:
 	mypy sopel_remind
 
 test:
-	coverage run -m py.test -v .
+	coverage run -m pytest -v .
 
 coverage_report:
 	coverage report
