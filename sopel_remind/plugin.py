@@ -1,4 +1,6 @@
 """Reminder plugin for Sopel."""
+from __future__ import annotations
+
 import os
 import threading
 from datetime import datetime
@@ -117,14 +119,23 @@ def remind_in(bot: SopelWrapper, trigger: Trigger):
 
 
 @plugin.command('at')
-@plugin.example('.at 22:15 Do something at 10:15 p.m.', user_help=True)
+@plugin.example('.at 22:15:19 Do something at 10:15:19 p.m.', user_help=True)
 @plugin.example('.at 10:00 Do something at 10 a.m.', user_help=True)
+@plugin.example('.at 2023-06-27 Python 3.7 EOL.', user_help=True)
+@plugin.example('.at 2023-06-27 12:00:00 Python 3.7 EOL.', user_help=True)
+@plugin.example('.at 12:00:00 2023-06-27 Python 3.7 EOL.', user_help=True)
 def remind_at(bot: SopelWrapper, trigger: Trigger):
-    """Set a reminder for later using hh:mm:ss exact time (timezone aware).
+    """Set a reminder for later using an exact (date) time (timezone aware).
 
     Both hh:mm and hh:mm:ss work. If setting a reminder at a past hour of the
-    day, this will use the same hour the next day. The time uses the same
-    timezone as the user, the channel, or UTC if none is available.
+    day, this will use the same hour the next day.
+
+    You can set the date using YYYY-MM-DD, either alone, or with a time
+    (before or after). A date-only reminder will use the current time on that
+    future date.
+
+    The reminder uses the same timezone as the user, the channel, or UTC if
+    none is available.
     """
     args = trigger.group(2)
 
@@ -132,15 +143,16 @@ def remind_at(bot: SopelWrapper, trigger: Trigger):
         bot.reply("When and what would you like me to remind?")
         return
 
+    user_tz = backend.get_user_timezone(bot, trigger.nick, trigger.sender)
+    now = datetime.now(pytz.utc).astimezone(user_tz)
+
     try:
-        at_time, message = backend.parse_at_time(args)
+        when, message = backend.parse_at_time(args, now)
     except ValueError:
         bot.reply("Sorry I didn't understand that.")
         return
 
-    user_tz = backend.get_user_timezone(bot, trigger.nick, trigger.sender)
-    today = pytz.utc.localize(datetime.utcnow()).astimezone(user_tz)
-    reminder = backend.build_at_reminder(trigger, at_time, today, message)
+    reminder = backend.build_at_reminder(trigger, when, message)
 
     with LOCK:
         backend.store(bot, reminder)

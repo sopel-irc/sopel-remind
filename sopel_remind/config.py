@@ -1,4 +1,6 @@
 """Configuration section for plugin."""
+from __future__ import annotations
+
 from sopel.config.types import FilenameAttribute, StaticSection  # type: ignore
 
 

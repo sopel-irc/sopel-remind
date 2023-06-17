@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import os
 from unittest import mock
@@ -158,32 +160,15 @@ def test_build_reminder(mockbot, triggerfactory):
 
 def test_build_at_reminder(mockbot, triggerfactory):
     trigger = triggerfactory(
-        mockbot, ':Test!test@example.com PRIVMSG #channel :.at 1:30 message')
+        mockbot, ':Test!test@example.com PRIVMSG #channel :.at 01:30 message')
 
     timezone = pytz.timezone('Europe/Paris')
-    today = timezone.localize(datetime.datetime(2021, 9, 28, 10, 0, 0))
-    at_time = datetime.time(11, 0, 0)
+    remind_at = timezone.localize(datetime.datetime(2021, 9, 28, 1, 30, 0))
     message = 'test message'
 
-    reminder = backend.build_at_reminder(trigger, at_time, today, message)
-    expected_at = today = timezone.localize(
-        datetime.datetime(2021, 9, 28, 11, 0, 0))
-
-    assert int(expected_at.timestamp()) == reminder.timestamp
-
-
-def test_build_at_reminder_tomorrow(mockbot, triggerfactory):
-    trigger = triggerfactory(
-        mockbot, ':Test!test@example.com PRIVMSG #channel :.at 1:30 message')
-
-    timezone = pytz.timezone('Europe/Paris')
-    today = timezone.localize(datetime.datetime(2021, 9, 28, 12, 0, 0))
-    at_time = datetime.time(11, 0, 0)
-    message = 'test message'
-
-    reminder = backend.build_at_reminder(trigger, at_time, today, message)
-    expected_at = today = timezone.localize(
-        datetime.datetime(2021, 9, 29, 11, 0, 0))
+    reminder = backend.build_at_reminder(trigger, remind_at, message)
+    expected_at = timezone.localize(
+        datetime.datetime(2021, 9, 28, 1, 30, 0))
 
     assert int(expected_at.timestamp()) == reminder.timestamp
 
