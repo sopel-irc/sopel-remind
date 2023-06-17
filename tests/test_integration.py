@@ -1,4 +1,6 @@
 """Integration tests for the sopel-remind plugin."""
+from __future__ import annotations
+
 import os
 from datetime import datetime
 from unittest import mock

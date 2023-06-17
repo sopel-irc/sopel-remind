@@ -1,8 +1,10 @@
 """Backend to store and manage reminders."""
+from __future__ import annotations
+
 import csv
 import os
 import re
-from datetime import datetime, time, timedelta
+from datetime import datetime, timedelta
 from typing import List, NamedTuple, Optional, Sequence, Tuple, Union
 
 import pytz
@@ -22,15 +24,22 @@ IN_TIME_PATTERN = '|'.join([
     r'(?P<seconds>(?:(\d+)s))',
 ])
 
-AT_TIME_PATTERN = (
-    # hours:minutes
-    r'(?P<hours>\d{1,2}):(?P<minutes>\d{2})'
-    # optional seconds
-    r'(?::(?P<seconds>\d{2}))?'
-)
+TIME_PATTERN = r'\d{2}:\d{2}(?::\d{2})?'
+DATE_PATTERN = r'\d{4}-\d{2}-\d{2}'
+
+AT_TIME_PATTERN = '|'.join((
+    # Date Time
+    '(?P<d_t>' + DATE_PATTERN + ' ' + TIME_PATTERN + ')',
+    # Time Date
+    '(?P<t_d>' + TIME_PATTERN + ' ' + DATE_PATTERN + ')',
+    # Time only
+    '(?P<t>' + TIME_PATTERN + ')',
+    # Date only
+    '(?P<d>' + DATE_PATTERN + ')',
+))
 
 IN_ARGS_PATTERN = r'(?:' + IN_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
-AT_ARGS_PATTERN = r'(?:' + AT_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
+AT_ARGS_PATTERN = r'(' + AT_TIME_PATTERN + r')\s+(?P<text>\S+.*)'
 
 IN_RE = re.compile(IN_ARGS_PATTERN)
 AT_RE = re.compile(AT_ARGS_PATTERN)
@@ -136,24 +145,82 @@ def parse_in_delta(line: str) -> Tuple[timedelta, str]:
     return delta, message
 
 
-def parse_at_time(line: str) -> Tuple[time, str]:
+def parse_at_time(line: str, now: datetime) -> Tuple[datetime, str]:
     """Parse a reminder line using the ``at`` command format.
 
-    :param line: reminder line from the ``in`` command
-    :return: a 2-value tuple with ``(seconds, message)``
-    :raise ValueError: when ``line`` doesn't match the ``in`` command format
+    :param line: reminder line from the ``at`` command
+    :param now: the time reference point (localized in the user's timezone)
+    :return: a 2-value tuple with ``(when, message)``
+    :raise ValueError: when ``line`` doesn't match the ``at`` command format
+
+    The goal is to parse the line to get what to remind the user and when
+    exactly. The format can be one of the following:
+
+    * a date only
+    * a time only
+    * a date before the time
+    * a time before the date
+
+    These formats require some manipulation of the current time (``now``)
+    in the appropriate timezone to always return an accurate
+    :class:`datetime.datetime` object.
     """
     result = AT_RE.match(line)
+    assert isinstance(now.tzinfo, pytz.BaseTzInfo), (
+        'Always use pytz.BaseTzInfo with parse_at_time.'
+    )
+    user_tz = now.tzinfo
 
     if not result:
-        raise ValueError('Invalid at arguments: %r' % line)
+        raise ValueError('Invalid date/time format')
 
-    hours = int(result.group('hours') or 0)
-    minutes = int(result.group('minutes') or 0)
-    seconds = int(result.group('seconds') or 0)
+    groups = result.groupdict()
+    time_only = groups['t']
+    date_only = groups['d']
+    date_time = groups['d_t']
+    time_date = groups['t_d']
 
-    timer = time(hours, minutes, seconds)
-    return (timer, result.group('text'))
+    assert any((time_only, date_only, date_time, time_date)), (
+        'Did you change the regex? You should have at least one.'
+    )
+
+    raw_date: str = now.strftime('%Y-%m-%d')
+    raw_time: str = now.strftime('%H:%M:%S')
+
+    if time_only:
+        raw_time = str(time_only)
+    elif date_only:
+        raw_date = str(date_only)
+    elif date_time:
+        raw_date, raw_time = date_time.split(' ')
+    else:
+        raw_time, raw_date = time_date.split(' ')
+
+    # padding raw time with seconds if necessary (hh:mm => hh:mm:ss)
+    if len(raw_time) == 5:
+        raw_time = raw_time + ':00'
+
+    try:
+        requested_at = user_tz.localize(
+            datetime.strptime(
+                ' '.join((raw_date, raw_time)),
+                '%Y-%m-%d %H:%M:%S',
+            )
+        )
+    except ValueError as exc:
+        raise ValueError(
+            'Invalid value for a date (%r) and/or time (%r)'
+            % (raw_date, raw_time)
+        ) from exc
+
+    if requested_at <= now:
+        if time_only:
+            # time only: request for tomorrow
+            requested_at = requested_at + timedelta(days=1)
+        else:
+            raise ValueError('At argument should be in the future.')
+
+    return (requested_at, result.group('text'))
 
 
 def build_reminder(
@@ -168,7 +235,7 @@ def build_reminder(
     :param message: message to remind later
     :return: the expected reminder
     """
-    remind_at = pytz.utc.localize(datetime.utcnow()) + delta
+    remind_at = datetime.now(pytz.utc) + delta
     destination = str(trigger.sender)
     nick = str(trigger.nick)
 
@@ -182,8 +249,7 @@ def build_reminder(
 
 def build_at_reminder(
     trigger: Trigger,
-    at_time: time,
-    today: datetime,
+    remind_at: datetime,
     message: str,
 ) -> Reminder:
     """Make a reminder for the current ``trigger`` and ``at_time``.
@@ -194,12 +260,6 @@ def build_at_reminder(
     :param message: message to remind later
     :return: the expected reminder
     """
-    remind_at = today.date()
-
-    if today.time() >= at_time:
-        remind_at = remind_at + timedelta(days=1)
-
-    remind_at = datetime.combine(remind_at, at_time, today.tzinfo)
     destination = str(trigger.sender)
     nick = str(trigger.nick)
     return Reminder(
