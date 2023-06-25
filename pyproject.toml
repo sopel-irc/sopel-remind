@@ -11,7 +11,7 @@ namespaces = false
 
 [project]
 name = "sopel-remind"
-version = "0.1.dev2"
+version = "0.1.0"
 description = "Reminder plugin for Sopel"
 keywords = [
   "sopel",
@@ -42,6 +42,7 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
     "Topic :: Communications :: Chat :: Internet Relay Chat",
 ]
 requires-python = ">=3.7, <4"

@@ -42,8 +42,7 @@ Passing only a date will set a reminder on that date with *the current time*
 Install
 =======
 
-The recommended way to install this plugin **will** be to use ``pip``
-**once it is officially released on pypi**::
+The recommended way to install this plugin is to use ``pip``::
 
     $ pip install sopel-remind
 

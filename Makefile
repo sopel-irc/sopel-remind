@@ -34,4 +34,4 @@ develop:
 
 build:
 	rm -rf build/ dist/
-	python setup.py sdist bdist_wheel
+	python -m build --sdist --wheel --outdir dist/ .
