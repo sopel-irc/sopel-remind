@@ -6,7 +6,7 @@ import threading
 from datetime import datetime
 
 import pytz
-from sopel import plugin, tools  # type: ignore
+from sopel import plugin, tools, version_info  # type: ignore
 from sopel.bot import Sopel, SopelWrapper  # type: ignore
 from sopel.config import Config  # type: ignore
 from sopel.trigger import Trigger  # type: ignore
@@ -38,10 +38,18 @@ def configure(settings: Config):
     os.makedirs(settings.remind.location, exist_ok=True)
 
 
+def is_connected(bot: Sopel) -> bool:
+    if version_info.major < 8:
+        # bot.connection_registered is unreliable on Sopel 7
+        # (https://github.com/sopel-irc/sopel/pull/2375)
+        return bot.backend.connected
+    return bot.connection_registered
+
+
 @plugin.interval(2)
 def reminder_job(bot: Sopel):
     """Check reminders every 2s."""
-    if not bot.backend.connected:
+    if not is_connected(bot):
         # Don't run if the bot is not connected.
         LOGGER.debug('No reminders to send while the bot is not connected.')
         return
