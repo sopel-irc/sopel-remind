@@ -1,9 +1,9 @@
 """Integration tests for the sopel-remind plugin."""
 from __future__ import annotations
 
+import io
 import os
 from datetime import datetime
-from unittest import mock
 
 import pytest
 import pytz
@@ -45,16 +45,91 @@ def irc(mockbot, user, ircfactory):
     return ircfactory(mockbot)
 
 
-def test_configure(tmpconfig):
-    with mock.patch('sopel.config.types.get_input') as mock_input:
-        mock_input.side_effect = [os.path.join('relative', 'path')]
-        configure(tmpconfig)
+def test_configure(tmpconfig, monkeypatch):
+    user_inputs = io.StringIO('%s\nn\n' % os.path.join('relative', 'path'))
+    monkeypatch.setattr('sys.stdin', user_inputs)
+    configure(tmpconfig)
 
     assert 'remind' in tmpconfig
     assert hasattr(tmpconfig.remind, 'location')
 
     assert tmpconfig.remind.location == os.path.join(
         tmpconfig.core.homedir, 'relative', 'path')
+
+
+def test_configure_migration(tmpconfig, monkeypatch):
+    expected = Reminder(1687797939, '#test', 'TestUser', 'Test Message.')
+    builtin_filename = os.path.join(
+        tmpconfig.core.homedir,
+        tmpconfig.basename + '.reminders.db',
+    )
+
+    with open(builtin_filename, mode='w', encoding='utf-8') as fd:
+        fd.writelines([
+            '\t'.join((
+                str(expected.timestamp),
+                expected.destination,
+                expected.nick,
+                expected.message,
+            )),
+        ])
+
+    user_inputs = io.StringIO('\n\n')
+    monkeypatch.setattr('sys.stdin', user_inputs)
+    configure(tmpconfig)
+
+    assert not os.path.isfile(builtin_filename), (
+        'Builtin file must be removed.'
+    )
+
+    assert os.path.isfile(builtin_filename + '.bk'), (
+        'Builtin file must be renamed to a .bk file.'
+    )
+
+    filename = get_reminder_filename(tmpconfig)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 1, 'Expected one reminder from migration.'
+    assert reminders[0] == expected
+
+
+def test_configure_migration_no_file(tmpconfig, monkeypatch):
+    user_inputs = io.StringIO('\n\n')
+    monkeypatch.setattr('sys.stdin', user_inputs)
+    configure(tmpconfig)
+
+    filename = get_reminder_filename(tmpconfig)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 0, 'Expected no reminder from migration.'
+
+
+def test_configure_migration_no_reminders(tmpconfig, monkeypatch):
+    builtin_filename = os.path.join(
+        tmpconfig.core.homedir,
+        tmpconfig.basename + '.reminders.db',
+    )
+
+    with open(builtin_filename, mode='w', encoding='utf-8'):
+        # the file is now created (and empty)
+        pass
+
+    user_inputs = io.StringIO('\n\n')
+    monkeypatch.setattr('sys.stdin', user_inputs)
+    configure(tmpconfig)
+
+    assert not os.path.isfile(builtin_filename), (
+        'Builtin file must be removed even when empty.'
+    )
+
+    assert os.path.isfile(builtin_filename + '.bk'), (
+        'Builtin file must be renamed to a .bk file even when empty'
+    )
+
+    filename = get_reminder_filename(tmpconfig)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 0, 'Expected no reminder from migration.'
 
 
 def test_remind_in(irc, user):

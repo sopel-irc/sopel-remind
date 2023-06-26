@@ -1,6 +1,7 @@
 """Reminder plugin for Sopel."""
 from __future__ import annotations
 
+import io
 import os
 import threading
 from datetime import datetime
@@ -9,6 +10,7 @@ import pytz
 from sopel import plugin, tools  # type: ignore
 from sopel.bot import Sopel, SopelWrapper  # type: ignore
 from sopel.config import Config  # type: ignore
+from sopel.config.types import BooleanAttribute  # type: ignore
 from sopel.trigger import Trigger  # type: ignore
 
 from . import backend, config
@@ -28,7 +30,7 @@ def shutdown(bot: Sopel):
     backend.shutdown(bot)
 
 
-def configure(settings: Config):
+def configure(settings: Config) -> None:
     """Configure the plugin."""
     settings.define_section('remind', config.RemindSection)
     settings.remind.configure_setting(
@@ -36,6 +38,50 @@ def configure(settings: Config):
         'In which folder would you like to store your reminders?',
         default=settings.core.homedir)
     os.makedirs(settings.remind.location, exist_ok=True)
+
+    # manage migration while configuring the plugin
+    migrate: str = input(
+        'Do you want to migrate from the built-in remind plugin? Y/n'
+    ) or 'y'
+    migrate_attr = BooleanAttribute('mock_migrate', default=True)
+    if migrate_attr.parse(migrate):
+        # is there anything to migrate?
+        builtin_filename = os.path.join(
+            settings.core.homedir,
+            settings.basename + '.reminders.db',
+        )
+
+        migrated: int = 0
+        if os.path.isfile(builtin_filename):
+            backup_name = builtin_filename + '.bk'
+            filename = backend.get_reminder_filename(settings)
+            migrated = migrate_builtin(builtin_filename, filename)
+            os.rename(builtin_filename, backup_name)
+            print('Migrated file renamed to "%s".' % backup_name)
+
+        if migrated:
+            print('Migrated %d reminder(s).' % migrated)
+        else:
+            print('There was no reminder to migrate. You are good to go!')
+
+
+def migrate_builtin(from_file: str, to_file: str) -> int:
+    """Migrate reminders from the built-in remind plugin."""
+    return_value: int = 0
+    reminders = backend.load_reminders(to_file)
+
+    with io.open(from_file, 'r', encoding='utf-8') as database:
+        for i, line in enumerate(database, start=1):
+            unixtime, channel, nick, message = line.split('\t', 3)
+            message = message.rstrip('\n')
+            timestamp = int(float(unixtime))  # ignore microseconds
+            reminders.append(
+                backend.Reminder(timestamp, channel, nick, message)
+            )
+            return_value = i
+
+    backend.save_reminders(reminders, to_file)
+    return return_value
 
 
 @plugin.interval(2)

@@ -47,3 +47,12 @@ The recommended way to install this plugin is to use ``pip``::
     $ pip install sopel-remind
 
 Note that this plugin requires Python 3.7+ and Sopel 7.1+.
+
+Migration from built-in
+=======================
+
+If you used Sopel 7.1 (or any previous version) and its built-in "remind"
+plugin, you may want to migrate your reminders to the new plugin. To do that,
+you can run the ``sopel-plugins configure remind`` command and allow the script
+to perform the migration. This will import the reminders from the original file
+before renaming it (by adding the ``.bk`` suffix).
