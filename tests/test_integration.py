@@ -40,6 +40,7 @@ def user(userfactory):
 def irc(mockbot, user, ircfactory):
     server = ircfactory(mockbot)
     server.bot.backend.connected = True
+    server.bot.connection_registered = True
     server.join(user, '#channel')
     server.bot.backend.clear_message_sent()
     return ircfactory(mockbot)
@@ -276,6 +277,20 @@ def test_job_not_connected(irc):
         Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
 
     irc.bot.backend.connected = False
+
+    # not connected: there should not be any messages
+    reminder_job(irc.bot)
+    assert irc.bot.backend.message_sent == []
+
+    assert len(irc.bot.memory[MEMORY_KEY]) == 1
+
+
+def test_job_connected_but_not_registered(irc):
+    timestamp = int(pytz.utc.localize(datetime.utcnow()).timestamp())
+    irc.bot.memory[MEMORY_KEY].append(
+        Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
+
+    irc.bot.connection_registered = False
 
     # not connected: there should not be any messages
     reminder_job(irc.bot)
