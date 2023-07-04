@@ -150,7 +150,7 @@ def remind_in(bot: SopelWrapper, trigger: Trigger):
     try:
         delta, message = backend.parse_in_delta(args)
     except ValueError:
-        bot.reply("Sorry I didn't understand that.")
+        bot.reply("Sorry, I didn't understand that.")
         return
 
     reminder = backend.build_reminder(trigger, delta, message)
@@ -195,7 +195,7 @@ def remind_at(bot: SopelWrapper, trigger: Trigger):
     try:
         when, message = backend.parse_at_time(args, now)
     except ValueError:
-        bot.reply("Sorry I didn't understand that.")
+        bot.reply("Sorry, I didn't understand that.")
         return
 
     reminder = backend.build_at_reminder(trigger, when, message)
