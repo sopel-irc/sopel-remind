@@ -167,7 +167,7 @@ def test_remind_in_invalid_argument(irc, user):
     assert len(irc.bot.memory[MEMORY_KEY]) == 0
 
     assert irc.bot.backend.message_sent == rawlist(
-        "PRIVMSG #channel :TestUser: Sorry I didn't understand that."
+        "PRIVMSG #channel :TestUser: Sorry, I didn't understand that."
     )
 
 
@@ -205,7 +205,7 @@ def test_remind_at_invalid_argument(irc, user):
     assert len(irc.bot.memory[MEMORY_KEY]) == 0
 
     assert irc.bot.backend.message_sent == rawlist(
-        "PRIVMSG #channel :TestUser: Sorry I didn't understand that."
+        "PRIVMSG #channel :TestUser: Sorry, I didn't understand that."
     )
 
 
