@@ -179,7 +179,11 @@ def test_get_reminder_timezone(mockbot, mockreminder):
         result = backend.get_reminder_timezone(mockbot, mockreminder)
 
     mock_get_timezone.assert_called_once_with(
-        mockbot.db, nick='Test', channel='#channel')
+        db=mockbot.db,
+        config=mockbot.settings,
+        nick='Test',
+        channel='#channel',
+    )
     assert result.zone == 'Europe/Paris'
 
 
@@ -189,7 +193,11 @@ def test_get_reminder_timezone_no_info(mockbot, mockreminder):
         result = backend.get_reminder_timezone(mockbot, mockreminder)
 
     mock_get_timezone.assert_called_once_with(
-        mockbot.db, nick='Test', channel='#channel')
+        db=mockbot.db,
+        config=mockbot.settings,
+        nick='Test',
+        channel='#channel',
+    )
     assert result.zone == 'UTC'
 
 
@@ -203,7 +211,11 @@ def test_get_user_timezone(mockbot, triggerfactory):
             mockbot, trigger.nick, trigger.sender)
 
     mock_get_timezone.assert_called_once_with(
-        mockbot.db, nick='Test', channel='#channel')
+        db=mockbot.db,
+        config=mockbot.settings,
+        nick='Test',
+        channel='#channel',
+    )
     assert result.zone == 'Europe/Paris'
 
 
@@ -217,7 +229,11 @@ def test_get_user_timezone_pm(mockbot, triggerfactory):
             mockbot, trigger.nick, trigger.sender)
 
     mock_get_timezone.assert_called_once_with(
-        mockbot.db, nick='Test', channel=None)
+        db=mockbot.db,
+        config=mockbot.settings,
+        nick='Test',
+        channel=None,
+    )
     assert result.zone == 'Europe/Paris'
 
 
@@ -231,7 +247,11 @@ def test_get_user_timezone_edge_case(mockbot, triggerfactory):
             mockbot, trigger.nick, trigger.sender)
 
     mock_get_timezone.assert_called_once_with(
-        mockbot.db, nick=None, channel='#test')
+        db=mockbot.db,
+        config=mockbot.settings,
+        nick=None,
+        channel='#test',
+    )
     assert result.zone == 'Europe/Paris'
 
 

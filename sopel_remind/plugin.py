@@ -11,6 +11,7 @@ from sopel import plugin, tools  # type: ignore
 from sopel.bot import Sopel, SopelWrapper  # type: ignore
 from sopel.config import Config  # type: ignore
 from sopel.config.types import BooleanAttribute  # type: ignore
+from sopel.tools.time import format_time  # type: ignore
 from sopel.trigger import Trigger  # type: ignore
 
 from . import backend, config
@@ -158,10 +159,16 @@ def remind_in(bot: SopelWrapper, trigger: Trigger):
     with LOCK:
         backend.store(bot, reminder)
 
-    when = datetime.fromtimestamp(
-        reminder.timestamp, pytz.utc
-    ).astimezone(backend.get_reminder_timezone(bot, reminder))
-    bot.reply('I will remind you that at %s' % (when.strftime('%H:%M:%S')))
+    when = datetime.fromtimestamp(reminder.timestamp, pytz.utc)
+    display_timezone = backend.get_reminder_timezone(bot, reminder)
+    display_when = format_time(
+        db=bot.db,
+        config=bot.settings,
+        channel=reminder.destination,
+        zone=display_timezone.zone or 'UTC',
+        time=when,
+    )
+    bot.reply('I will remind you that at %s' % display_when)
 
 
 @plugin.command('at')
@@ -203,7 +210,13 @@ def remind_at(bot: SopelWrapper, trigger: Trigger):
     with LOCK:
         backend.store(bot, reminder)
 
-    when = datetime.fromtimestamp(
-        reminder.timestamp, pytz.utc
-    ).astimezone(backend.get_reminder_timezone(bot, reminder))
-    bot.reply('I will remind you that at %s' % (when.strftime('%H:%M:%S')))
+    when = datetime.fromtimestamp(reminder.timestamp, pytz.utc)
+    display_timezone = backend.get_reminder_timezone(bot, reminder)
+    display_when = format_time(
+        db=bot.db,
+        config=bot.settings,
+        channel=reminder.destination,
+        zone=display_timezone.zone or 'UTC',
+        time=when,
+    )
+    bot.reply('I will remind you that at %s' % display_when)

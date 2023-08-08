@@ -10,7 +10,7 @@ import pytz
 from sopel.tests import rawlist
 
 from sopel_remind.backend import (MEMORY_KEY, Reminder, get_reminder_filename,
-                                  load_reminders)
+                                  get_reminder_timezone, load_reminders)
 from sopel_remind.plugin import configure, reminder_job
 
 TMP_CONFIG = """
@@ -134,17 +134,21 @@ def test_configure_migration_no_reminders(tmpconfig, monkeypatch):
 
 
 def test_remind_in(irc, user):
+    irc.bot.db.set_channel_value('#channel', 'timezone', 'Europe/Paris')
     irc.say(user, '#channel', '.in 1s this is my reminder')
 
     assert len(irc.bot.backend.message_sent) == 1
     assert len(irc.bot.memory[MEMORY_KEY]) == 1
 
     reminder = irc.bot.memory[MEMORY_KEY][0]
-    when = datetime.fromtimestamp(reminder.timestamp, pytz.utc)
+    timezone = get_reminder_timezone(irc.bot, reminder)
+    when = datetime.fromtimestamp(
+        reminder.timestamp, pytz.utc
+    ).astimezone(timezone)
 
     assert irc.bot.backend.message_sent == rawlist(
         "PRIVMSG #channel :TestUser: I will remind you that at %s"
-        % when.strftime('%H:%M:%S'),
+        % when.strftime('%Y-%m-%d - %T%Z'),
     )
 
 
@@ -182,7 +186,7 @@ def test_remind_at(irc, user):
 
     assert irc.bot.backend.message_sent == rawlist(
         "PRIVMSG #channel :TestUser: I will remind you that at %s"
-        % when.strftime('%H:%M:%S'),
+        % when.strftime('%Y-%m-%d - %T%Z'),
     )
 
 

@@ -281,7 +281,8 @@ def get_reminder_timezone(
     :return: the appropriate timezone for ``reminder``
     """
     return pytz.timezone(tools.time.get_timezone(
-        bot.db,
+        db=bot.db,
+        config=bot.settings,
         nick=reminder.nick,
         channel=reminder.destination,
     ) or 'UTC')
@@ -326,7 +327,8 @@ def get_user_timezone(
         return pytz.utc
 
     return pytz.timezone(tools.time.get_timezone(
-        bot.db,
+        db=bot.db,
+        config=bot.settings,
         nick=nickname,
         channel=channel,
     ) or 'UTC')
