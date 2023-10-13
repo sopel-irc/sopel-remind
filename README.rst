@@ -5,14 +5,14 @@ sopel-remind
 Sopel plugin ``.in`` command::
 
     [17:30] Exirel: .in 2h go to the grocery store
-    [17:30] Sopel: Exirel: I will remind you that at 19:30:00
+    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 -19:30:00CEST
     (... 2h later ...)
     [19:30] Sopel: Exirel: go to the grocery store
 
 And ``.at`` command::
 
     [17:30] Exirel: .at 19:30 go to the grocery store
-    [17:30] Sopel: Exirel: I will remind you that at 19:30:00
+    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 -19:30:00CEST
     (... 2h later ...)
     [19:30] Sopel: Exirel: go to the grocery store
 
