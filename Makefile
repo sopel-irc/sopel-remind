@@ -29,8 +29,9 @@ qa: quality test coverages pylint pyroma
 .PHONY: develop build
 
 develop:
-	pip install -r requirements.txt
-	python setup.py develop
+	python -m pip install -U pip
+	python -m pip install -U -r requirements.txt
+	python -m pip install -e .
 
 build:
 	rm -rf build/ dist/
