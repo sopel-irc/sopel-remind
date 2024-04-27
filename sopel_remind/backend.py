@@ -239,6 +239,10 @@ def build_reminder(
     destination = str(trigger.sender)
     nick = str(trigger.nick)
 
+    # TODO: remove when Sopel 8 is released
+    if hasattr(trigger, 'status_prefix'):
+        destination = (trigger.status_prefix or '') + destination
+
     return Reminder(
         int(remind_at.timestamp()),
         destination,
