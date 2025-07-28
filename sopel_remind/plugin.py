@@ -88,7 +88,7 @@ def migrate_builtin(from_file: str, to_file: str) -> int:
 @plugin.interval(2)
 def reminder_job(bot: Sopel):
     """Check reminders every 2s."""
-    if not bot.backend.is_connected() or not bot.connection_registered:
+    if not bot.connection_registered:
         # Don't run if the bot is not connected.
         LOGGER.debug('No reminders to send while the bot is not connected.')
         return

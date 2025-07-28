@@ -40,7 +40,7 @@ def user(userfactory):
 def irc(mockbot, user, ircfactory):
     server = ircfactory(mockbot)
     server.bot.backend.connected = True
-    server.bot.connection_registered = True
+    server.bot._connection_registered.set()  # nasty private-attribute access
     server.join(user, '#channel')
     server.bot.backend.clear_message_sent()
     return ircfactory(mockbot)
@@ -294,7 +294,7 @@ def test_job_connected_but_not_registered(irc):
     irc.bot.memory[MEMORY_KEY].append(
         Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
 
-    irc.bot.connection_registered = False
+    irc.bot._connection_registered.clear()  # nasty private-attribute access
 
     # not connected: there should not be any messages
     reminder_job(irc.bot)
