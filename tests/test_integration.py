@@ -148,7 +148,7 @@ def test_remind_in(irc, user):
 
     assert irc.bot.backend.message_sent == rawlist(
         "PRIVMSG #channel :TestUser: I will remind you that at %s"
-        % when.strftime('%Y-%m-%d - %T%Z'),
+        % when.strftime('%Y-%m-%d - %T %Z'),
     )
 
 
@@ -186,7 +186,7 @@ def test_remind_at(irc, user):
 
     assert irc.bot.backend.message_sent == rawlist(
         "PRIVMSG #channel :TestUser: I will remind you that at %s"
-        % when.strftime('%Y-%m-%d - %T%Z'),
+        % when.strftime('%Y-%m-%d - %T %Z'),
     )
 
 
