@@ -214,7 +214,7 @@ def test_remind_at_invalid_argument(irc, user):
 
 
 def test_shutdown(irc):
-    timestamp = int(datetime.utcnow().timestamp())
+    timestamp = int(datetime.now(pytz.utc).timestamp())
     reminder = Reminder(timestamp, '#channel', 'TestUser', 'Test message.')
     irc.bot.memory[MEMORY_KEY].append(reminder)
     irc.bot.on_close()
@@ -235,7 +235,7 @@ def test_job_no_reminders(irc):
 
 
 def test_job_future_reminders(irc):
-    timestamp = int(pytz.utc.localize(datetime.utcnow()).timestamp()) + 3600
+    timestamp = int(datetime.now(pytz.utc).timestamp()) + 3600
     reminder = Reminder(timestamp, '#channel', 'TestUser', 'Test message.')
     irc.bot.memory[MEMORY_KEY].append(reminder)
 
@@ -245,7 +245,7 @@ def test_job_future_reminders(irc):
 
 
 def test_job_past_reminders(irc):
-    timestamp = int(pytz.utc.localize(datetime.utcnow()).timestamp())
+    timestamp = int(datetime.now(pytz.utc).timestamp())
     irc.bot.memory[MEMORY_KEY].append(
         Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
     irc.bot.memory[MEMORY_KEY].append(
@@ -276,7 +276,7 @@ def test_job_past_reminders(irc):
 
 
 def test_job_not_connected(irc):
-    timestamp = int(pytz.utc.localize(datetime.utcnow()).timestamp())
+    timestamp = int(datetime.now(pytz.utc).timestamp())
     irc.bot.memory[MEMORY_KEY].append(
         Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
 
@@ -290,7 +290,7 @@ def test_job_not_connected(irc):
 
 
 def test_job_connected_but_not_registered(irc):
-    timestamp = int(pytz.utc.localize(datetime.utcnow()).timestamp())
+    timestamp = int(datetime.now(pytz.utc).timestamp())
     irc.bot.memory[MEMORY_KEY].append(
         Reminder(timestamp - 1, '#channel', 'TestUser', 'Test message.'))
 
