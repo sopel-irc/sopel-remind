@@ -44,7 +44,7 @@ Install
 
 The recommended way to install this plugin is to use ``pip``::
 
-    $ pip install sopel-remind
+    $ python -m pip install sopel-remind
 
 Note that this plugin requires Python 3.7+ and Sopel 7.1+. It won't work on
 Python versions that are not supported by the version of Sopel you are using.

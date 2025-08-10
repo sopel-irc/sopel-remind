@@ -1,10 +1,8 @@
 .PHONY: qa quality test coverages coverage_report coverage_html pylint pyroma
 
 quality:
-	isort sopel_remind
-	flake8 sopel_remind
-	isort tests
-	flake8 tests/*
+	isort -c sopel_remind tests
+	flake8
 	mypy sopel_remind
 
 test:
@@ -30,7 +28,7 @@ qa: quality test coverages pylint pyroma
 
 develop:
 	python -m pip install -U pip
-	python -m pip install -U -r requirements.txt
+	python -m pip install -U --group dev
 	python -m pip install -e .
 
 build:
