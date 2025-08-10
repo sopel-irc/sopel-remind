@@ -93,7 +93,7 @@ def reminder_job(bot: Sopel):
         LOGGER.debug('No reminders to send while the bot is not connected.')
         return
 
-    now = int(pytz.utc.localize(datetime.utcnow()).timestamp())
+    now = int(datetime.now(pytz.utc).timestamp())
     kept = []
 
     with LOCK:

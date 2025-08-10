@@ -142,7 +142,7 @@ def test_build_reminder(mockbot, triggerfactory):
     trigger = triggerfactory(
         mockbot, ':Test!test@example.com PRIVMSG #channel :.in 5s message')
 
-    now = pytz.utc.localize(datetime.datetime.utcnow())
+    now = datetime.datetime.now(pytz.utc)
     delta = datetime.timedelta(seconds=5)
     message = 'test message'
 
@@ -154,7 +154,7 @@ def test_build_reminder(mockbot, triggerfactory):
     assert reminder.nick == 'Test'
     assert int((now + delta).timestamp()) <= reminder.timestamp
 
-    after_now = pytz.utc.localize(datetime.datetime.utcnow())
+    after_now = datetime.datetime.now(pytz.utc)
     assert int((after_now + delta).timestamp()) >= reminder.timestamp
 
 
