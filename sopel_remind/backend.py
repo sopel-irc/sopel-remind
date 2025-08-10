@@ -236,7 +236,7 @@ def build_reminder(
     :return: the expected reminder
     """
     remind_at = datetime.now(pytz.utc) + delta
-    destination = str(trigger.sender)
+    destination = (trigger.status_prefix or '') + str(trigger.sender)
     nick = str(trigger.nick)
 
     return Reminder(

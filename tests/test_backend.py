@@ -26,7 +26,11 @@ def tmpconfig(configfactory):
 
 @pytest.fixture
 def mockbot(tmpconfig, botfactory):
-    return botfactory(tmpconfig)
+    bot = botfactory(tmpconfig)
+    bot._isupport = bot.isupport.apply(
+        STATUSMSG=('+', '@'),
+    )
+    return bot
 
 
 @pytest.fixture
@@ -151,6 +155,26 @@ def test_build_reminder(mockbot, triggerfactory):
     assert isinstance(reminder, backend.Reminder)
     assert reminder.message == message
     assert reminder.destination == '#channel'
+    assert reminder.nick == 'Test'
+    assert int((now + delta).timestamp()) <= reminder.timestamp
+
+    after_now = datetime.datetime.now(pytz.utc)
+    assert int((after_now + delta).timestamp()) >= reminder.timestamp
+
+
+def test_build_reminder_status_prefix(mockbot, triggerfactory):
+    trigger = triggerfactory(
+        mockbot, ':Test!test@example.com PRIVMSG +#channel :.in 5s message')
+
+    now = datetime.datetime.now(pytz.utc)
+    delta = datetime.timedelta(seconds=5)
+    message = 'test message'
+
+    reminder = backend.build_reminder(trigger, delta, message)
+
+    assert isinstance(reminder, backend.Reminder)
+    assert reminder.message == message
+    assert reminder.destination == '+#channel'
     assert reminder.nick == 'Test'
     assert int((now + delta).timestamp()) <= reminder.timestamp
 
