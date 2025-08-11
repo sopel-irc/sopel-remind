@@ -299,3 +299,40 @@ def test_store(mockbot, mockreminder):
     assert mockreminder in mockbot.memory[backend.MEMORY_KEY]
     assert len(mockbot.memory[backend.MEMORY_KEY]) == 1
     assert backend.load_reminders(filename) == [mockreminder]
+
+
+def test_clear_reminders_user_channel(mockbot, mockreminder: backend.Reminder):
+    # create a other reminders (same time, but different destination or nick)
+    same_nick = backend.Reminder(
+        mockreminder.timestamp, '#other', mockreminder.nick, 'message',
+    )
+    same_destination = backend.Reminder(
+        mockreminder.timestamp, mockreminder.destination, 'Other', 'message',
+    )
+
+    # setup reminders
+    mockbot.settings.define_section('remind', config.RemindSection)
+    filename = backend.get_reminder_filename(mockbot.settings)
+
+    mockbot.memory[backend.MEMORY_KEY] = []
+    backend.store(mockbot, mockreminder)
+    backend.store(mockbot, same_nick)
+    backend.store(mockbot, same_destination)
+
+    assert mockreminder in mockbot.memory[backend.MEMORY_KEY]
+    assert same_nick in mockbot.memory[backend.MEMORY_KEY]
+    assert same_destination in mockbot.memory[backend.MEMORY_KEY]
+
+    result = backend.clear_reminders(
+        mockbot,
+        nick='Test',
+        destination='#channel',
+    )
+
+    assert result == 1, 'Only one reminder should be counted.'
+
+    assert mockreminder not in mockbot.memory[backend.MEMORY_KEY]
+    assert same_nick in mockbot.memory[backend.MEMORY_KEY]
+    assert same_destination in mockbot.memory[backend.MEMORY_KEY]
+
+    assert backend.load_reminders(filename) == [same_nick, same_destination]

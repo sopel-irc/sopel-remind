@@ -363,3 +363,30 @@ def store(bot: Union[Sopel, SopelWrapper], reminder: Reminder):
     bot.memory[MEMORY_KEY].append(reminder)
     filename = get_reminder_filename(bot.settings)
     save_reminders(bot.memory[MEMORY_KEY], filename)
+
+
+def clear_reminders(
+    bot: Union[Sopel, SopelWrapper],
+    *,
+    nick: str,
+    destination: str,
+) -> int:
+    """Clear reminders for the given ``nick`` and ``destination``.
+
+    :param nick: owner of the reminders to clear
+    :param destination: destination of the reminders to clear
+    """
+    reminders: list[Reminder] = list(bot.memory[MEMORY_KEY])
+
+    before = len(reminders)
+    bot.memory[MEMORY_KEY] = [
+        reminder
+        for reminder in reminders
+        if reminder.destination != destination or reminder.nick != nick
+    ]
+    after = len(bot.memory[MEMORY_KEY])
+
+    filename = get_reminder_filename(bot.settings)
+    save_reminders(bot.memory[MEMORY_KEY], filename)
+
+    return before - after

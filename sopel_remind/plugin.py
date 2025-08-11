@@ -220,3 +220,26 @@ def remind_at(bot: SopelWrapper, trigger: Trigger):
         time=when,
     )
     bot.reply('I will remind you that at %s' % display_when)
+
+
+@plugin.command('reminders clear')
+def reminders_clear(sopel: SopelWrapper, trigger: Trigger) -> None:
+    """Clear all your reminders for the current channel.
+
+    You'll get a notice with the number of reminders cleared for that channel.
+    """
+    nick = trigger.nick
+    destination = trigger.sender
+
+    with LOCK:
+        removed = backend.clear_reminders(
+            sopel,
+            nick=nick,
+            destination=destination,
+        )
+
+    template = '{removed} reminder(s) removed for channel {destination}.'
+    sopel.notice(
+        template.format(removed=removed, destination=destination),
+        destination=nick,
+    )
