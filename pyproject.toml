@@ -11,7 +11,7 @@ namespaces = false
 
 [project]
 name = "sopel-remind"
-version = "0.4.0.dev0"
+version = "1.0.0.dev0"
 description = "Reminder plugin for Sopel"
 keywords = [
   "sopel",
@@ -32,17 +32,16 @@ authors = [
 readme = "README.rst"
 license = { text="EFL-2.0" }
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
-    "License :: Eiffel Forum License (EFL)",
-    "License :: OSI Approved :: Eiffel Forum License",
     "Operating System :: POSIX :: Linux",
-    "Programming Language :: Python :: 3.7",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Communications :: Chat :: Internet Relay Chat",
 ]
 requires-python = ">=3.7, <4"
@@ -57,3 +56,38 @@ dependencies = [
 
 [project.entry-points."sopel.plugins"]
 remind = "sopel_remind.plugin"
+
+[dependency-groups]
+dev = [ # These are requirements to develop the plugin itself.
+    {include-group = "lint"},
+    {include-group = "test"},
+]
+lint = [
+    "flake8",
+    "flake8-pyproject",
+    "pylint",
+    "coverage",
+    "coverage[toml]",
+    "pyroma",
+    "mypy",
+    "types-pytz",
+]
+test = [
+    "pytest",
+]
+
+[tool.flake8]
+max-line-length = 79
+
+[tool.isort]
+line_length = 79
+known_third_party = ["sopel"]
+known_first_party = ["sopel_remind"]
+
+[tool.pytest.ini_options]
+python_files = "*.py"
+addopts = "--tb=short -p no:nose"
+
+[tool.coverage.run]
+branch = true
+source = ["sopel_remind"]
