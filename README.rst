@@ -2,17 +2,16 @@
 sopel-remind
 ============
 
-Sopel plugin ``.in`` command::
+Plugin commands
+===============
+
+The ``.in`` command
+-------------------
+
+Usage::
 
     [17:30] Exirel: .in 2h go to the grocery store
-    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 -19:30:00CEST
-    (... 2h later ...)
-    [19:30] Sopel: Exirel: go to the grocery store
-
-And ``.at`` command::
-
-    [17:30] Exirel: .at 19:30 go to the grocery store
-    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 -19:30:00CEST
+    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 - 19:30:00 CEST
     (... 2h later ...)
     [19:30] Sopel: Exirel: go to the grocery store
 
@@ -20,6 +19,16 @@ The ``.in`` command accepts time units ranging from days to seconds::
 
     .in 1d2h In one day and 2 hours
     .in 2h59m3s In 2 hours, 59 minutes, and 3 seconds
+
+The ``.at`` command
+-------------------
+
+Usage::
+
+    [17:30] Exirel: .at 19:30 go to the grocery store
+    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 - 19:30:00 CEST
+    (... 2h later ...)
+    [19:30] Sopel: Exirel: go to the grocery store
 
 The ``.at`` command is timezone aware, and tries to use the timezone set for
 the user. If not found, it will use the timezone set for the channel. If none
@@ -39,6 +48,25 @@ or after the time::
 Passing only a date will set a reminder on that date with *the current time*
 (not adjusted for summer/daylight-savings).
 
+Clear your reminders
+--------------------
+
+You can clear your reminders in a channel with the ``.reminders clear``
+command::
+
+    [17:30] Exirel: .in 30min go to the gym
+    [17:30] Sopel: Exirel: I will remind you that at 2023-10-13 - 18:00:00 CEST
+    (... 25min later ...)
+    [17:50] Exirel: .reminders clear
+    [17:50] Sopel (NOTICE): 1 reminder(s) removed for channel #channel.
+
+You can also call it in a **private message**:
+
+* to remove all your **private** reminders
+* or, with a **channel as argument** (e.g., ``.reminders clear #channel``), to
+  privately remove all your reminders for said channel
+
+
 Install
 =======
 
@@ -46,8 +74,9 @@ The recommended way to install this plugin is to use ``pip``::
 
     $ python -m pip install sopel-remind
 
-Note that this plugin requires Python 3.7+ and Sopel 7.1+. It won't work on
+Note that this plugin requires Python 3.8+ and Sopel 8.0+. It won't work on
 Python versions that are not supported by the version of Sopel you are using.
+
 
 Migration from built-in
 =======================
