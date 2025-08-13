@@ -17,7 +17,9 @@ TMP_CONFIG = """
 [core]
 owner = testnick
 nick = TestBot
-enable = coretasks, remind
+enable =
+    coretasks
+    remind
 """
 
 
@@ -213,7 +215,7 @@ def test_remind_at_invalid_argument(irc, user):
     )
 
 
-def test_remind_reminders_clear_channel_self(irc, userfactory):
+def test_remind_reminders_clear_channel(irc, userfactory):
     user = userfactory('TestUser')
     not_user = userfactory('NotTestUser')
 
@@ -242,6 +244,40 @@ def test_remind_reminders_clear_channel_self(irc, userfactory):
     assert irc.bot.memory[MEMORY_KEY][0].destination == '#other'
     assert irc.bot.memory[MEMORY_KEY][0].nick == 'TestUser'
     assert irc.bot.memory[MEMORY_KEY][1].destination == '#channel'
+    assert irc.bot.memory[MEMORY_KEY][1].nick == 'NotTestUser'
+
+
+def test_remind_reminders_clear_private_message(irc, userfactory):
+    user = userfactory('TestUser')
+    not_user = userfactory('NotTestUser')
+
+    irc.say(user, irc.bot.nick, '.in 1d say hi')
+    irc.say(user, '#other', '.in 1d say hi')
+    irc.say(not_user, irc.bot.nick, '.in 1d say hi')
+    assert len(irc.bot.memory[MEMORY_KEY]) == 3, 'Error with the .in command'
+    assert len(irc.bot.backend.message_sent) == 3, 'Error with the .in command'
+
+    irc.say(user, irc.bot.nick, '.reminders clear')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[3:]) == 1
+    assert irc.bot.backend.message_sent[3:] == rawlist(
+        "NOTICE TestUser :1 private reminder(s) removed.",
+    )
+
+    # assert file's content and bot's memory are consistent
+    filename = get_reminder_filename(irc.bot.settings)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 2
+    assert reminders == irc.bot.memory[MEMORY_KEY]
+
+    assert len(irc.bot.memory[MEMORY_KEY]) == 2
+    # keep channel reminder for the same user but from a channel
+    assert irc.bot.memory[MEMORY_KEY][0].destination == '#other'
+    assert irc.bot.memory[MEMORY_KEY][0].nick == 'TestUser'
+    # keep private reminder for another user
+    assert irc.bot.memory[MEMORY_KEY][1].destination == 'NotTestUser'
     assert irc.bot.memory[MEMORY_KEY][1].nick == 'NotTestUser'
 
 
