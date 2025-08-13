@@ -236,6 +236,13 @@ def reminders_clear(sopel: SopelWrapper, trigger: Trigger) -> None:
     nick = trigger.nick
     destination = trigger.sender
 
+    if option := trigger.group(2):
+        target = sopel.make_identifier(option)
+        if target.is_nick():
+            sopel.notice('"%s" is not a channel.' % target, destination=nick)
+            return
+        destination = target
+
     with LOCK:
         removed = backend.clear_reminders(
             sopel,
