@@ -220,3 +220,42 @@ def remind_at(bot: SopelWrapper, trigger: Trigger):
         time=when,
     )
     bot.reply('I will remind you that at %s' % display_when)
+
+
+@plugin.command('reminders clear')
+def reminders_clear(sopel: SopelWrapper, trigger: Trigger) -> None:
+    """Clear all your channel or private reminders.
+
+    When used in a channel, this will remove all the reminders you have defined
+    in that channel. When used in a private message, this will remove your
+    private reminders instead.
+
+    In both case you'll get a private NOTICE with the number of reminders
+    removed (if any).
+    """
+    nick = trigger.nick
+    destination = trigger.sender
+
+    if option := trigger.group(2):
+        target = sopel.make_identifier(option)
+        if target.is_nick():
+            sopel.notice('"%s" is not a channel.' % target, destination=nick)
+            return
+        destination = target
+
+    with LOCK:
+        removed = backend.clear_reminders(
+            sopel,
+            nick=nick,
+            destination=destination,
+        )
+
+    if destination.is_nick():
+        template = '{removed} private reminder(s) removed.'
+    else:
+        template = '{removed} reminder(s) removed for channel {destination}.'
+
+    sopel.notice(
+        template.format(removed=removed, destination=destination),
+        destination=nick,
+    )

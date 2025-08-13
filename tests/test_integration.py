@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import os
+import typing
 from datetime import datetime
 
 import pytest
@@ -13,31 +14,45 @@ from sopel_remind.backend import (MEMORY_KEY, Reminder, get_reminder_filename,
                                   get_reminder_timezone, load_reminders)
 from sopel_remind.plugin import configure, reminder_job
 
+if typing.TYPE_CHECKING:
+    from sopel.bot import Sopel
+    from sopel.config import Config
+    from sopel.tests.factories import (BotFactory, ConfigFactory, IRCFactory,
+                                       UserFactory)
+    from sopel.tests.mocks import MockIRCServer, MockUser
+
+
 TMP_CONFIG = """
 [core]
 owner = testnick
 nick = TestBot
-enable = coretasks, remind
+enable =
+    coretasks
+    remind
 """
 
 
 @pytest.fixture
-def tmpconfig(configfactory):
+def tmpconfig(configfactory: ConfigFactory) -> Config:
     return configfactory('test.cfg', TMP_CONFIG)
 
 
 @pytest.fixture
-def mockbot(tmpconfig, botfactory):
+def mockbot(tmpconfig: Config, botfactory: BotFactory) -> Sopel:
     return botfactory.preloaded(tmpconfig, preloads=['remind'])
 
 
 @pytest.fixture
-def user(userfactory):
+def user(userfactory: UserFactory) -> MockUser:
     return userfactory('TestUser')
 
 
 @pytest.fixture
-def irc(mockbot, user, ircfactory):
+def irc(
+    mockbot: Sopel,
+    user: MockUser,
+    ircfactory: IRCFactory,
+) -> MockIRCServer:
     server = ircfactory(mockbot)
     server.bot.backend.connected = True
     server.bot._connection_registered.set()  # nasty private-attribute access
@@ -211,6 +226,148 @@ def test_remind_at_invalid_argument(irc, user):
     assert irc.bot.backend.message_sent == rawlist(
         "PRIVMSG #channel :TestUser: Sorry, I didn't understand that."
     )
+
+
+def test_remind_reminders_clear_channel(irc, userfactory):
+    user = userfactory('TestUser')
+    not_user = userfactory('NotTestUser')
+
+    irc.say(user, '#channel', '.in 1d say hi')
+    irc.say(user, '#other', '.in 1d say hi')
+    irc.say(not_user, '#channel', '.in 1d say hi')
+    assert len(irc.bot.memory[MEMORY_KEY]) == 3, 'Error with the .in command'
+    assert len(irc.bot.backend.message_sent) == 3, 'Error with the .in command'
+
+    irc.say(user, '#channel', '.reminders clear')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[3:]) == 1
+    assert irc.bot.backend.message_sent[3:] == rawlist(
+        "NOTICE TestUser :1 reminder(s) removed for channel #channel.",
+    )
+
+    # assert file's content and bot's memory are consistent
+    filename = get_reminder_filename(irc.bot.settings)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 2
+    assert reminders == irc.bot.memory[MEMORY_KEY]
+
+    assert len(irc.bot.memory[MEMORY_KEY]) == 2
+    assert irc.bot.memory[MEMORY_KEY][0].destination == '#other'
+    assert irc.bot.memory[MEMORY_KEY][0].nick == 'TestUser'
+    assert irc.bot.memory[MEMORY_KEY][1].destination == '#channel'
+    assert irc.bot.memory[MEMORY_KEY][1].nick == 'NotTestUser'
+
+
+def test_remind_reminders_clear_private_message(irc, userfactory):
+    user = userfactory('TestUser')
+    not_user = userfactory('NotTestUser')
+
+    irc.say(user, irc.bot.nick, '.in 1d say hi')
+    irc.say(user, '#other', '.in 1d say hi')
+    irc.pm(not_user, '.in 1d say hi')
+    assert len(irc.bot.memory[MEMORY_KEY]) == 3, 'Error with the .in command'
+    assert len(irc.bot.backend.message_sent) == 3, 'Error with the .in command'
+
+    irc.pm(user, '.reminders clear')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[3:]) == 1
+    assert irc.bot.backend.message_sent[3:] == rawlist(
+        "NOTICE TestUser :1 private reminder(s) removed.",
+    )
+
+    # assert file's content and bot's memory are consistent
+    filename = get_reminder_filename(irc.bot.settings)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 2
+    assert reminders == irc.bot.memory[MEMORY_KEY]
+
+    assert len(irc.bot.memory[MEMORY_KEY]) == 2
+    # keep channel reminder for the same user but from a channel
+    assert irc.bot.memory[MEMORY_KEY][0].destination == '#other'
+    assert irc.bot.memory[MEMORY_KEY][0].nick == 'TestUser'
+    # keep private reminder for another user
+    assert irc.bot.memory[MEMORY_KEY][1].destination == 'NotTestUser'
+    assert irc.bot.memory[MEMORY_KEY][1].nick == 'NotTestUser'
+
+
+def test_remind_reminders_clear_private_message_with_channel(
+    irc: MockIRCServer,
+    userfactory: UserFactory,
+) -> None:
+    user = userfactory('TestUser')
+    not_user = userfactory('NotTestUser')
+
+    irc.say(user, '#channel', '.in 1d say hi')
+    irc.say(user, '#other', '.in 1d say hi')
+    irc.pm(user, '.in 1d say hi')
+    irc.say(not_user, '#channel', '.in 1d say hi')
+    assert len(irc.bot.memory[MEMORY_KEY]) == 4, 'Error with the .in command'
+    assert len(irc.bot.backend.message_sent) == 4, 'Error with the .in command'
+
+    irc.pm(user, '.reminders clear #channel')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[4:]) == 1
+    assert irc.bot.backend.message_sent[4:] == rawlist(
+        "NOTICE TestUser :1 reminder(s) removed for channel #channel.",
+    )
+
+    # assert file's content and bot's memory are consistent
+    filename = get_reminder_filename(irc.bot.settings)
+    reminders = load_reminders(filename)
+
+    assert len(reminders) == 3
+    assert reminders == irc.bot.memory[MEMORY_KEY]
+
+    # Other channel reminder is kept
+    assert irc.bot.memory[MEMORY_KEY][0].destination == '#other'
+    assert irc.bot.memory[MEMORY_KEY][0].nick == 'TestUser'
+    # Private reminder is kept
+    assert irc.bot.memory[MEMORY_KEY][1].destination == 'TestUser'
+    assert irc.bot.memory[MEMORY_KEY][1].nick == 'TestUser'
+    # Other user reminder is kept as well
+    assert irc.bot.memory[MEMORY_KEY][2].destination == '#channel'
+    assert irc.bot.memory[MEMORY_KEY][2].nick == 'NotTestUser'
+
+
+def test_remind_reminders_clear_with_nick(
+    irc: MockIRCServer,
+    userfactory: UserFactory,
+) -> None:
+    user = userfactory('TestUser')
+    not_user = userfactory('NotTestUser')
+
+    irc.say(user, '#channel', '.in 1d say hi')
+    irc.say(user, '#other', '.in 1d say hi')
+    irc.pm(user, '.in 1d say hi')
+    irc.say(not_user, '#channel', '.in 1d say hi')
+    expected = list(irc.bot.memory[MEMORY_KEY])
+    assert len(expected) == 4, 'Error with the .in command'
+    assert len(irc.bot.backend.message_sent) == 4, 'Error with the .in command'
+
+    # try with a private message
+    irc.pm(user, '.reminders clear NotTestUser')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[4:]) == 1
+    assert irc.bot.backend.message_sent[4:] == rawlist(
+        'NOTICE TestUser :"NotTestUser" is not a channel.',
+    )
+    assert irc.bot.memory[MEMORY_KEY] == expected
+
+    # try with a channel message
+    irc.say(user, '#channel', '.reminders clear NotTestUser')
+
+    # assert bot's response
+    assert len(irc.bot.backend.message_sent[5:]) == 1
+    assert irc.bot.backend.message_sent[5:] == rawlist(
+        'NOTICE TestUser :"NotTestUser" is not a channel.',
+    )
+    assert irc.bot.memory[MEMORY_KEY] == expected
 
 
 def test_shutdown(irc):
